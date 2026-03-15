@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -7,18 +7,19 @@ const supabase = createClient(
 );
 
 export async function POST(
-  _request: Request,
+  request: NextRequest,
   { params }: { params: { gameId: string } }
 ) {
   const gameId = params.gameId;
+  const body = await request.json().catch(() => ({}));
+  const folderId = body.folder_id ?? null;
 
-  const { data: questions } = await supabase
-    .from('questions')
-    .select('id')
-    .limit(500);
+  let q = supabase.from('questions').select('id');
+  if (folderId) q = q.eq('folder_id', folderId);
+  const { data: questions } = await q.limit(500);
   if (!questions || questions.length < 5) {
     return NextResponse.json(
-      { error: 'At least 5 questions required in DB' },
+      { error: folderId ? 'そのフォルダに5問以上必要です' : 'At least 5 questions required in DB' },
       { status: 400 }
     );
   }

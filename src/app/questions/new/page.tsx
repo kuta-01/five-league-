@@ -1,17 +1,29 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 export default function NewQuestionPage() {
+  const searchParams = useSearchParams();
+  const folderId = searchParams.get('folder_id');
+
   const [questionText, setQuestionText] = useState('');
   const [answer, setAnswer] = useState('');
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (folderId === null) return;
+    if (!folderId) {
+      window.location.href = '/questions';
+    }
+  }, [folderId]);
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!folderId) return;
     setError(null);
     const q = questionText.trim();
     const a = answer.trim();
@@ -28,7 +40,7 @@ export default function NewQuestionPage() {
       const res = await fetch('/api/questions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question_text: q, answer: a }),
+        body: JSON.stringify({ folder_id: folderId, question_text: q, answer: a }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -45,13 +57,21 @@ export default function NewQuestionPage() {
     setSaving(false);
   };
 
+  if (!folderId) {
+    return (
+      <main className="min-h-screen p-4 flex items-center justify-center">
+        <p className="text-slate-600">フォルダが指定されていません</p>
+      </main>
+    );
+  }
+
   if (done) {
     return (
       <main className="min-h-screen p-4 flex flex-col items-center justify-center">
         <p className="text-green-600 font-bold">保存しました</p>
         <div className="flex gap-4 mt-4">
-          <Link href="/questions/new" className="text-rose-600 hover:underline">もう1問追加</Link>
-          <Link href="/questions" className="text-slate-600 hover:underline">一覧へ</Link>
+          <Link href={`/questions/new?folder_id=${folderId}`} className="text-rose-600 hover:underline">もう1問追加</Link>
+          <Link href={`/questions/folder/${folderId}?t=${Date.now()}`} className="text-slate-600 hover:underline">フォルダへ</Link>
         </div>
       </main>
     );
@@ -94,7 +114,7 @@ export default function NewQuestionPage() {
           </button>
         </form>
         <p className="mt-4">
-          <Link href="/questions" className="text-slate-600 hover:underline">← 一覧へ</Link>
+          <Link href={`/questions/folder/${folderId}`} className="text-slate-600 hover:underline">← フォルダへ</Link>
         </p>
       </div>
     </main>

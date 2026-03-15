@@ -7,18 +7,26 @@ const supabase = createClient(
 );
 
 export async function GET(request: NextRequest) {
+  const folderId = request.nextUrl.searchParams.get('folder_id');
   const limit = Math.min(Number(request.nextUrl.searchParams.get('limit')) || 500, 500);
-  const { data, error } = await supabase
+  let q = supabase
     .from('questions')
     .select('id, question_text, answer')
     .order('created_at', { ascending: false })
     .limit(limit);
+  if (folderId) q = q.eq('folder_id', folderId);
+  const { data, error } = await q;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+  const res = NextResponse.json(data ?? []);
+  if (folderId) res.headers.set('Cache-Control', 'no-store, max-age=0');
+  return res;
 }
 
 export async function POST(request: NextRequest) {
-  const { question_text, answer } = await request.json();
+  const { folder_id, question_text, answer } = await request.json();
+  if (!folder_id) {
+    return NextResponse.json({ error: 'folder_id required' }, { status: 400 });
+  }
   if (!question_text?.trim() || !answer?.trim()) {
     return NextResponse.json({ error: 'question_text and answer required' }, { status: 400 });
   }
@@ -28,7 +36,7 @@ export async function POST(request: NextRequest) {
   }
   const { data, error } = await supabase
     .from('questions')
-    .insert({ question_text: question_text.trim(), answer: a })
+    .insert({ folder_id, question_text: question_text.trim(), answer: a })
     .select('id, question_text, answer')
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

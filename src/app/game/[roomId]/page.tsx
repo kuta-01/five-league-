@@ -47,6 +47,9 @@ export default function GamePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [canvasResetKey, setCanvasResetKey] = useState(0);
+  const [folders, setFolders] = useState<{ id: string; name: string }[]>([]);
+  const [questionSource, setQuestionSource] = useState<'all' | 'folder'>('all');
+  const [selectedFolderId, setSelectedFolderId] = useState<string>('');
   const timeUpFired = useRef(false);
 
   const gameId = game?.id;
@@ -147,6 +150,15 @@ export default function GamePage() {
     return () => clearInterval(id);
   }, [gameId, game?.state, fetchPlayers]);
 
+  // GM用: 出題元フォルダ一覧を取得
+  useEffect(() => {
+    if (game?.state !== 'waiting' || mySlot !== 1) return;
+    fetch('/api/folders')
+      .then((r) => r.json())
+      .then((data) => setFolders(Array.isArray(data) ? data : []))
+      .catch(() => setFolders([]));
+  }, [game?.state, mySlot]);
+
   useEffect(() => {
     if (!game) return;
     if (game.state === 'drawing') timeUpFired.current = false;
@@ -206,7 +218,14 @@ export default function GamePage() {
 
   const handleStart = async () => {
     if (!gameId || mySlot !== 1) return;
-    const res = await fetch(`/api/games/${gameId}/start`, { method: 'POST' });
+    const body = questionSource === 'folder' && selectedFolderId
+      ? { folder_id: selectedFolderId }
+      : {};
+    const res = await fetch(`/api/games/${gameId}/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
     if (!res.ok) {
       const err = await res.json();
       setError(err.error || '開始に失敗しました');
@@ -558,14 +577,53 @@ export default function GamePage() {
           参加者: {players.map((p) => `${p.slot}文字目 ${p.name}`).join(' / ')}
         </p>
         {isGM && (
-          <div className="flex justify-center">
-            <button
-              onClick={handleStart}
-              disabled={players.length < 5}
-              className="px-8 py-4 bg-rose-500 text-white font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {players.length < 5 ? `あと${5 - players.length}人待ち` : 'ゲーム開始'}
-            </button>
+          <div className="space-y-4">
+            <div className="rounded-lg border border-slate-200 p-4 bg-slate-50">
+              <p className="text-sm font-medium text-slate-700 mb-2">出題元</p>
+              <div className="flex flex-wrap gap-3 items-center">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="questionSource"
+                    checked={questionSource === 'all'}
+                    onChange={() => setQuestionSource('all')}
+                    className="rounded"
+                  />
+                  <span className="text-sm">全フォルダからランダム</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="questionSource"
+                    checked={questionSource === 'folder'}
+                    onChange={() => setQuestionSource('folder')}
+                    className="rounded"
+                  />
+                  <span className="text-sm">1つのフォルダからランダム</span>
+                </label>
+                {questionSource === 'folder' && (
+                  <select
+                    value={selectedFolderId}
+                    onChange={(e) => setSelectedFolderId(e.target.value)}
+                    className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm"
+                  >
+                    <option value="">フォルダを選択</option>
+                    {folders.map((f) => (
+                      <option key={f.id} value={f.id}>{f.name}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            </div>
+            <div className="flex justify-center">
+              <button
+                onClick={handleStart}
+                disabled={players.length < 5 || (questionSource === 'folder' && !selectedFolderId)}
+                className="px-8 py-4 bg-rose-500 text-white font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {players.length < 5 ? `あと${5 - players.length}人待ち` : 'ゲーム開始'}
+              </button>
+            </div>
           </div>
         )}
         <p className="text-center mt-6">

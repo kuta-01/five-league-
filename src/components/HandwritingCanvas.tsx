@@ -1,0 +1,159 @@
+'use client';
+
+import { useCallback, useRef, useEffect, useState } from 'react';
+
+interface HandwritingCanvasProps {
+  slot: number;
+  disabled?: boolean;
+  onSave: (dataUrl: string) => void;
+  width?: number;
+  height?: number;
+}
+
+export default function HandwritingCanvas({
+  slot,
+  disabled = false,
+  onSave,
+  width = 120,
+  height = 120,
+}: HandwritingCanvasProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const lastPos = useRef<{ x: number; y: number } | null>(null);
+
+  const getPoint = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return null;
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      if ('touches' in e) {
+        const t = e.touches[0];
+        return { x: (t.clientX - rect.left) * scaleX, y: (t.clientY - rect.top) * scaleY };
+      }
+      return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+    },
+    []
+  );
+
+  const draw = useCallback(
+    (x: number, y: number) => {
+      const canvas = canvasRef.current;
+      if (!canvas || disabled) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.lineCap = 'round';
+      ctx.lineWidth = 8;
+      ctx.strokeStyle = '#1a1a2e';
+      if (lastPos.current) {
+        ctx.beginPath();
+        ctx.moveTo(lastPos.current.x, lastPos.current.y);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+      }
+      lastPos.current = { x, y };
+    },
+    [disabled]
+  );
+
+  const startDraw = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+      e.preventDefault();
+      if (disabled) return;
+      const p = getPoint(e);
+      if (p) {
+        lastPos.current = p;
+        setIsDrawing(true);
+        draw(p.x, p.y);
+      }
+    },
+    [disabled, getPoint, draw]
+  );
+
+  const moveDraw = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+      e.preventDefault();
+      if (!isDrawing || disabled) return;
+      const p = getPoint(e);
+      if (p) draw(p.x, p.y);
+    },
+    [isDrawing, disabled, getPoint, draw]
+  );
+
+  const endDraw = useCallback(() => {
+    lastPos.current = null;
+    setIsDrawing(false);
+  }, []);
+
+  const clear = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }, []);
+
+  const save = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const dataUrl = canvas.toDataURL('image/png');
+    onSave(dataUrl);
+  }, [onSave]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }, [slot]);
+
+  useEffect(() => {
+    const c = canvasRef.current;
+    if (!c) return;
+    const onTouchEnd = () => endDraw();
+    document.addEventListener('touchend', onTouchEnd);
+    document.addEventListener('touchcancel', onTouchEnd);
+    return () => {
+      document.removeEventListener('touchend', onTouchEnd);
+      document.removeEventListener('touchcancel', onTouchEnd);
+    };
+  }, [endDraw]);
+
+  return (
+    <div className="canvas-container flex flex-col items-center">
+      <canvas
+        ref={canvasRef}
+        width={width}
+        height={height}
+        className="border-2 border-slate-300 rounded-lg bg-white touch-none cursor-crosshair"
+        style={{ width: width, height: height, maxWidth: '100%' }}
+        onMouseDown={startDraw}
+        onMouseMove={moveDraw}
+        onMouseUp={endDraw}
+        onMouseLeave={endDraw}
+        onTouchStart={startDraw}
+        onTouchMove={moveDraw}
+      />
+      <div className="flex gap-2 mt-2">
+        <button
+          type="button"
+          onClick={clear}
+          disabled={disabled}
+          className="px-3 py-1 text-sm bg-slate-200 rounded disabled:opacity-50"
+        >
+          消す
+        </button>
+        <button
+          type="button"
+          onClick={save}
+          disabled={disabled}
+          className="px-3 py-1 text-sm bg-rose-500 text-white rounded disabled:opacity-50"
+        >
+          確定
+        </button>
+      </div>
+    </div>
+  );
+}

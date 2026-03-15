@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground: #1a1a2e;
+  --background: #f0f4f8;
+  --accent: #e94560;
+  --success: #0f3460;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+}
+
+/* Canvas touch action for mobile */
+.canvas-container {
+  touch-action: none;
+}
+
+.canvas-container canvas {
+  touch-action: none;
+}

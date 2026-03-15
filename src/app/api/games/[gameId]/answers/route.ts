@@ -34,7 +34,7 @@ export async function POST(
     .select('*', { count: 'exact', head: true })
     .eq('game_id', params.gameId)
     .eq('question_index', questionIndex);
-  if (!countError && count >= 5) {
+  if (!countError && (count ?? 0) >= 5) {
     await supabase
       .from('games')
       .update({ state: 'reveal', reveal_slot: 1 })

@@ -46,6 +46,7 @@ export default function GamePage() {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [canvasResetKey, setCanvasResetKey] = useState(0);
   const timeUpFired = useRef(false);
 
   const gameId = game?.id;
@@ -241,6 +242,18 @@ export default function GamePage() {
       }),
     });
     await fetchAnswers();
+    // 全員提出で判定フェーズに移行している可能性があるため即時反映
+    await fetchGame();
+  };
+
+  const handleRetryEdit = async () => {
+    if (!gameId || game?.state !== 'drawing' || mySlot == null) return;
+    await fetch(
+      `/api/games/${gameId}/answers?question_index=${game.current_question_index}&slot=${mySlot}`,
+      { method: 'DELETE' }
+    );
+    await fetchAnswers();
+    setCanvasResetKey((k) => k + 1);
   };
 
   const handleRevealNext = async () => {
@@ -400,12 +413,27 @@ export default function GamePage() {
             <HandwritingCanvas
               slot={mySlot}
               disabled={false}
+              submitted={answers.some((a) => a.slot === mySlot)}
+              resetKey={canvasResetKey}
               onSave={handleCanvasSave}
               width={200}
               height={200}
             />
           </div>
-          <p className="text-center text-xs text-slate-400 mt-4">書けたら「確定」を押してください</p>
+          {answers.some((a) => a.slot === mySlot) && (
+            <div className="flex justify-center mt-2">
+              <button
+                type="button"
+                onClick={handleRetryEdit}
+                className="px-4 py-2 text-sm text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg border border-slate-300"
+              >
+                書き直す
+              </button>
+            </div>
+          )}
+          <p className="text-center text-xs text-slate-400 mt-4">
+            {answers.some((a) => a.slot === mySlot) ? '提出済みです。全員が確定するか時間で判定に進みます。「書き直す」で再編集できます。' : '書けたら「確定」を押してください'}
+          </p>
         </div>
       </main>
     );
@@ -415,12 +443,15 @@ export default function GamePage() {
     const revealUpTo = game.reveal_slot ?? 0;
     const sortedAnswers = [...answers].sort((a, b) => a.slot - b.slot);
     const answerChars = currentQuestion?.answer?.split('') ?? [];
+    const allRevealed = revealUpTo >= 5;
     return (
       <main className="min-h-screen p-4">
         <div className="max-w-2xl mx-auto">
           <p className="text-center text-slate-600 mb-1">第 {game.current_question_index + 1} 問</p>
           <p className="text-lg font-bold text-center mb-4">{currentQuestion?.question_text}</p>
-          <p className="text-center text-slate-600 mb-2">書いた文字を1文字ずつ公開します。GMが正解と照合して判定します。</p>
+          <p className="text-center text-slate-600 mb-2">
+            {allRevealed ? '全員の文字が公開されました。正解と照合してGMが判定します。' : '書いた文字を1文字ずつ公開します。正解は全員分の文字が公開されるまで表示されません。'}
+          </p>
           <div className="flex justify-center gap-3 mb-6 flex-wrap">
             {[1, 2, 3, 4, 5].map((s) => {
               const a = sortedAnswers.find((x) => x.slot === s);
@@ -438,16 +469,18 @@ export default function GamePage() {
                     )}
                   </div>
                   <span className="text-xs text-slate-500 mt-1">{s}文字目</span>
-                  {revealed && expectedChar && (
+                  {allRevealed && revealed && expectedChar && (
                     <span className="text-xs text-slate-600">正解: {expectedChar}</span>
                   )}
                 </div>
               );
             })}
           </div>
-          <p className="text-center text-slate-600 mb-4">
-            正解: <span className="font-bold">{currentQuestion?.answer}</span>
-          </p>
+          {allRevealed && (
+            <p className="text-center text-slate-600 mb-4">
+              正解: <span className="font-bold">{currentQuestion?.answer}</span>
+            </p>
+          )}
           {state === 'reveal' && isGM && revealUpTo < 5 && (
             <div className="flex justify-center">
               <button

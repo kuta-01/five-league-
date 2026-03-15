@@ -5,6 +5,10 @@ import { useCallback, useRef, useEffect, useState } from 'react';
 interface HandwritingCanvasProps {
   slot: number;
   disabled?: boolean;
+  /** 確定済み（提出済み）のとき true。キャンバスをロックし提出済み表示にする */
+  submitted?: boolean;
+  /** 変更されるとキャンバスをクリアする（書き直し用） */
+  resetKey?: number;
   onSave: (dataUrl: string) => void;
   width?: number;
   height?: number;
@@ -13,10 +17,13 @@ interface HandwritingCanvasProps {
 export default function HandwritingCanvas({
   slot,
   disabled = false,
+  submitted = false,
+  resetKey = 0,
   onSave,
   width = 120,
   height = 120,
 }: HandwritingCanvasProps) {
+  const effectiveDisabled = disabled || submitted;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const lastPos = useRef<{ x: number; y: number } | null>(null);
@@ -40,7 +47,7 @@ export default function HandwritingCanvas({
   const draw = useCallback(
     (x: number, y: number) => {
       const canvas = canvasRef.current;
-      if (!canvas || disabled) return;
+      if (!canvas || effectiveDisabled) return;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
       ctx.lineCap = 'round';
@@ -54,13 +61,13 @@ export default function HandwritingCanvas({
       }
       lastPos.current = { x, y };
     },
-    [disabled]
+    [effectiveDisabled]
   );
 
   const startDraw = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
       e.preventDefault();
-      if (disabled) return;
+      if (effectiveDisabled) return;
       const p = getPoint(e);
       if (p) {
         lastPos.current = p;
@@ -68,17 +75,17 @@ export default function HandwritingCanvas({
         draw(p.x, p.y);
       }
     },
-    [disabled, getPoint, draw]
+    [effectiveDisabled, getPoint, draw]
   );
 
   const moveDraw = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
       e.preventDefault();
-      if (!isDrawing || disabled) return;
+      if (!isDrawing || effectiveDisabled) return;
       const p = getPoint(e);
       if (p) draw(p.x, p.y);
     },
-    [isDrawing, disabled, getPoint, draw]
+    [isDrawing, effectiveDisabled, getPoint, draw]
   );
 
   const endDraw = useCallback(() => {
@@ -110,6 +117,17 @@ export default function HandwritingCanvas({
   }, [slot]);
 
   useEffect(() => {
+    if (resetKey === 0) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }, [resetKey]);
+
+  useEffect(() => {
     const c = canvasRef.current;
     if (!c) return;
     const onTouchEnd = () => endDraw();
@@ -123,11 +141,17 @@ export default function HandwritingCanvas({
 
   return (
     <div className="canvas-container flex flex-col items-center">
+      {submitted && (
+        <div className="mb-2 flex items-center gap-2 rounded-lg bg-green-50 px-4 py-2 text-green-700 ring-2 ring-green-400">
+          <span className="text-lg" aria-hidden>✓</span>
+          <span className="font-bold">提出済み</span>
+        </div>
+      )}
       <canvas
         ref={canvasRef}
         width={width}
         height={height}
-        className="border-2 border-slate-300 rounded-lg bg-white touch-none cursor-crosshair"
+        className={`border-2 rounded-lg bg-white touch-none ${effectiveDisabled ? 'cursor-not-allowed border-green-400 opacity-90' : 'cursor-crosshair border-slate-300'}`}
         style={{ width: width, height: height, maxWidth: '100%' }}
         onMouseDown={startDraw}
         onMouseMove={moveDraw}
@@ -140,7 +164,7 @@ export default function HandwritingCanvas({
         <button
           type="button"
           onClick={clear}
-          disabled={disabled}
+          disabled={effectiveDisabled}
           className="px-3 py-1 text-sm bg-slate-200 rounded disabled:opacity-50"
         >
           消す
@@ -148,10 +172,10 @@ export default function HandwritingCanvas({
         <button
           type="button"
           onClick={save}
-          disabled={disabled}
+          disabled={effectiveDisabled}
           className="px-3 py-1 text-sm bg-rose-500 text-white rounded disabled:opacity-50"
         >
-          確定
+          {submitted ? '確定済み' : '確定'}
         </button>
       </div>
     </div>

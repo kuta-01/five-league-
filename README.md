@@ -62,6 +62,48 @@ npm run dev
 
 - **URL を知っている人だけアクセス** = アプリのURLを検索に出さず共有だけで使う想定です。
 
+### 修正を GitHub に上げて Vercel に反映する手順
+
+ローカルで修正した内容を GitHub にプッシュすると、Vercel に連携していれば自動でビルド・反映されます。
+
+#### 初回だけ（まだ GitHub にリポジトリがない場合）
+
+1. [GitHub](https://github.com) でログイン → **New repository** で新しいリポジトリを作成（名前は任意、例: `fiveleague`）。**Add a README** は不要。
+2. ターミナルでプロジェクトフォルダを開き、以下を実行:
+
+   ```bash
+   cd ファイブリーグ   # プロジェクトのフォルダへ
+   git init
+   git add .
+   git commit -m "Initial commit"
+   git branch -M main
+   git remote add origin https://github.com/あなたのユーザー名/リポジトリ名.git
+   git push -u origin main
+   ```
+
+   `あなたのユーザー名` と `リポジトリ名` は GitHub で作ったリポジトリのURLに合わせてください。
+
+3. [Vercel](https://vercel.com) にログイン → **Add New… → Project** → **Import** でさきほど作った GitHub リポジトリを選ぶ。
+4. **Environment Variables** に次を追加:
+   - `NEXT_PUBLIC_SUPABASE_URL` = Supabase の Project URL
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = Supabase の anon public キー
+5. **Deploy** を押す。完了後、表示された URL が本番のアプリです。
+
+#### 2回目以降（すでに GitHub と Vercel を連携済みの場合）
+
+修正が終わったら、次の3つだけ実行します。
+
+```bash
+cd ファイブリーグ
+git add .
+git commit -m "ここに変更内容のメモを書く（例: 書き直しボタン追加）"
+git push
+```
+
+- プッシュが成功すると、Vercel が自動でビルドを開始します。
+- Vercel のダッシュボード（https://vercel.com/dashboard ）で **Deployments** を開くと、進行状況や完了したURLを確認できます。
+- 通常 1〜2 分ほどで本番サイトに反映されます。
+
 ### フロント（Next.js）: Vercel
 
 1. [Vercel](https://vercel.com) で GitHub 連携

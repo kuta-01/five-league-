@@ -11,12 +11,13 @@ export async function POST(
   { params }: { params: { gameId: string } }
 ) {
   const body = await request.json();
+  const questionIndex = body.question_index ?? 0;
   const { data, error } = await supabase
     .from('round_answers')
     .upsert(
       {
         game_id: params.gameId,
-        question_index: body.question_index,
+        question_index: questionIndex,
         slot: body.slot,
         image_data: body.image_data ?? null,
         recognized_char: body.recognized_char ?? null,
@@ -26,7 +27,40 @@ export async function POST(
     .select()
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // 全5人が回答済みなら自動で正解判定フェーズ（reveal）へ
+  const { count, error: countError } = await supabase
+    .from('round_answers')
+    .select('*', { count: 'exact', head: true })
+    .eq('game_id', params.gameId)
+    .eq('question_index', questionIndex);
+  if (!countError && count >= 5) {
+    await supabase
+      .from('games')
+      .update({ state: 'reveal', reveal_slot: 1 })
+      .eq('id', params.gameId);
+  }
+
   return NextResponse.json(data);
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { gameId: string } }
+) {
+  const qi = request.nextUrl.searchParams.get('question_index');
+  const slot = request.nextUrl.searchParams.get('slot');
+  if (qi === null || slot === null) {
+    return NextResponse.json({ error: 'question_index and slot required' }, { status: 400 });
+  }
+  const { error } = await supabase
+    .from('round_answers')
+    .delete()
+    .eq('game_id', params.gameId)
+    .eq('question_index', parseInt(qi, 10))
+    .eq('slot', parseInt(slot, 10));
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true });
 }
 
 export async function GET(

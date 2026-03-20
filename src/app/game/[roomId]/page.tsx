@@ -476,12 +476,16 @@ export default function GamePage() {
   const state = game.state as GameState;
   const isGM = mySlot === 1;
   const roundStartedAt = game.round_started_at ? new Date(game.round_started_at).getTime() : null;
+  const nameForSlot = (slot: number) => players.find((p) => p.slot === slot)?.name ?? '—';
 
   if (state === 'countdown') {
     return (
-      <main className="min-h-screen flex flex-col items-center justify-center bg-slate-100">
+      <main className="min-h-screen flex flex-col items-center justify-center bg-slate-100 px-4">
         <p className="text-6xl font-bold text-rose-500">{countdown ?? 3}</p>
         <p className="mt-4 text-slate-600">ゲーム開始まで</p>
+        <p className="mt-6 text-center text-xs text-slate-500 max-w-md leading-relaxed">
+          スロット担当: {[1, 2, 3, 4, 5].map((s) => `${s}文字目 ${nameForSlot(s)}`).join(' / ')}
+        </p>
       </main>
     );
   }
@@ -501,8 +505,11 @@ export default function GamePage() {
               running={true}
             />
           </div>
+          <p className="text-center text-xs text-slate-500 mb-2 px-2">
+            スロット担当: {[1, 2, 3, 4, 5].map((s) => `${s}文字目 ${nameForSlot(s)}`).join(' / ')}
+          </p>
           <p className="text-center text-sm text-slate-500 mb-2">
-            {currentQuestion?.answer?.split('').map((_, i) => (i + 1 === mySlot ? '？' : '・')).join('')} ← あなたは{mySlot}文字目
+            {currentQuestion?.answer?.split('').map((_, i) => (i + 1 === mySlot ? '？' : '・')).join('')} ← あなたは{mySlot}文字目（{nameForSlot(mySlot)}）
           </p>
           <div className="flex justify-center">
             <HandwritingCanvas
@@ -566,7 +573,11 @@ export default function GamePage() {
                       <span className="text-slate-300">?</span>
                     )}
                   </div>
-                  <span className="text-xs text-slate-500 mt-1">{s}文字目</span>
+                  <span className="text-xs text-slate-500 mt-1 text-center max-w-[5.5rem] leading-tight">
+                    {s}文字目
+                    <br />
+                    <span className="text-slate-600 font-medium">{nameForSlot(s)}</span>
+                  </span>
                   {allRevealed && revealed && expectedChar && (
                     <span className="text-xs text-slate-600">正解: {expectedChar}</span>
                   )}

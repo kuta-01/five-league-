@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Noto_Sans_JP } from 'next/font/google';
 import './globals.css';
+import SoundProvider from '@/components/SoundProvider';
 
 const notoSansJP = Noto_Sans_JP({
   subsets: ['latin'],
@@ -19,7 +20,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ja" className={notoSansJP.variable}>
-      <body className="min-h-screen antialiased font-sans">{children}</body>
+      <body className="min-h-screen antialiased font-sans">
+        <SoundProvider>{children}</SoundProvider>
+      </body>
     </html>
   );
 }

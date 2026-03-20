@@ -62,6 +62,23 @@ npm run dev
 
 ブラウザで http://localhost:3000 を開く。
 
+### 4. 音声素材（BGM / 効果音）
+
+この実装では、次の3ファイルを `public/audio` に置くと音が鳴ります。
+
+- `public/audio/bgm_quiz.mp3`（BGM）
+- `public/audio/se_correct.mp3`（正解SE）
+- `public/audio/se_wrong.mp3`（不正解SE）
+
+今回の推奨素材（無料で使いやすいもの）:
+
+- BGM: [Quiz Music (Pixabay)](https://pixabay.com/no/music/slag-quiz-music-158558/)
+- 正解SE: [クイズ ピンポン（OtoLogic）](https://otologic.jp/free/se/quiz01.html)
+- 不正解SE: [クイズ ブブー（OtoLogic）](https://otologic.jp/free/se/quiz01.html)
+
+ダウンロードしたファイルを上記ファイル名にリネームして `public/audio/` に配置してください。
+初回は右下の「BGM/効果音を有効化」を押すと再生されます（ブラウザの自動再生制限対策）。
+
 ## デプロイ（無料で公開）
 
 - **URL を知っている人だけアクセス** = アプリのURLを検索に出さず共有だけで使う想定です。

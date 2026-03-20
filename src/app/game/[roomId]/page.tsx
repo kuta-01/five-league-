@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Game, GamePlayer, GameState, RoundAnswer } from '@/lib/supabase';
 import HandwritingCanvas from '@/components/HandwritingCanvas';
 import Timer from '@/components/Timer';
+import { useSound } from '@/components/SoundProvider';
 
 const PLAYER_STORAGE_KEY = 'fiveleague_player';
 
@@ -51,6 +52,8 @@ export default function GamePage() {
   const [questionSource, setQuestionSource] = useState<'all' | 'folder'>('all');
   const [selectedFolderId, setSelectedFolderId] = useState<string>('');
   const timeUpFired = useRef(false);
+  const resultSoundKeyRef = useRef('');
+  const { playCorrect, playWrong } = useSound();
 
   const gameId = game?.id;
 
@@ -167,6 +170,18 @@ export default function GamePage() {
       fetchAnswers();
     }
   }, [game?.state, game?.current_question_index, fetchCurrentQuestion, fetchAnswers, game]);
+
+  useEffect(() => {
+    if (!game || game.state !== 'result' || game.correct == null) return;
+    const key = `${game.current_question_index}-${game.correct}`;
+    if (resultSoundKeyRef.current === key) return;
+    resultSoundKeyRef.current = key;
+    if (game.correct) {
+      playCorrect();
+    } else {
+      playWrong();
+    }
+  }, [game?.state, game?.correct, game?.current_question_index, playCorrect, playWrong, game]);
 
   useEffect(() => {
     if (game?.state !== 'countdown') return;

@@ -69,8 +69,17 @@ export default function NewQuestionPage() {
     return (
       <main className="min-h-screen p-4 flex flex-col items-center justify-center">
         <p className="text-green-600 font-bold">保存しました</p>
-        <div className="flex gap-4 mt-4">
-          <Link href={`/questions/new?folder_id=${folderId}`} className="text-rose-600 hover:underline">もう1問追加</Link>
+        <div className="flex flex-wrap justify-center gap-4 mt-4">
+          <button
+            type="button"
+            onClick={() => {
+              setDone(false);
+              setError(null);
+            }}
+            className="text-rose-600 font-medium hover:underline"
+          >
+            もう1問追加
+          </button>
           <Link href={`/questions/folder/${folderId}?t=${Date.now()}`} className="text-slate-600 hover:underline">フォルダへ</Link>
         </div>
       </main>

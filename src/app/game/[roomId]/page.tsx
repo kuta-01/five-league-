@@ -3,7 +3,7 @@
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Game, GamePlayer, GameState, RoundAnswer } from '@/lib/supabase';
-import HandwritingCanvas from '@/components/HandwritingCanvas';
+import HandwritingCanvas, { type HandwritingCanvasHandle } from '@/components/HandwritingCanvas';
 import Timer from '@/components/Timer';
 import { useSound } from '@/components/SoundProvider';
 
@@ -53,9 +53,19 @@ export default function GamePage() {
   const [selectedFolderId, setSelectedFolderId] = useState<string>('');
   const timeUpFired = useRef(false);
   const resultSoundKeyRef = useRef('');
+  const canvasRef = useRef<HandwritingCanvasHandle | null>(null);
+  const answersRef = useRef<RoundAnswer[]>([]);
+  const mySlotRef = useRef<number | null>(null);
   const { playCorrect, playWrong } = useSound();
 
   const gameId = game?.id;
+
+  useEffect(() => {
+    answersRef.current = answers;
+  }, [answers]);
+  useEffect(() => {
+    mySlotRef.current = mySlot;
+  }, [mySlot]);
 
   const fetchGame = useCallback(async () => {
     const res = await fetch(`/api/games?room_id=${encodeURIComponent(roomId)}`);
@@ -260,6 +270,25 @@ export default function GamePage() {
     if (!gameId || game?.state !== 'drawing' || timeUpFired.current) return;
     timeUpFired.current = true;
     const qi = game.current_question_index;
+    const slot = mySlotRef.current;
+    const alreadySubmitted = slot != null && answersRef.current.some((a) => a.slot === slot);
+
+    if (!alreadySubmitted && slot != null) {
+      const dataUrl = canvasRef.current?.getDataUrl();
+      if (dataUrl) {
+        await fetch(`/api/games/${gameId}/answers`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            question_index: qi,
+            slot,
+            image_data: dataUrl,
+            recognized_char: null,
+          }),
+        });
+      }
+    }
+
     await fetch(`/api/games/${gameId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -477,6 +506,7 @@ export default function GamePage() {
           </p>
           <div className="flex justify-center">
             <HandwritingCanvas
+              ref={canvasRef}
               slot={mySlot}
               disabled={false}
               submitted={answers.some((a) => a.slot === mySlot)}
@@ -498,7 +528,9 @@ export default function GamePage() {
             </div>
           )}
           <p className="text-center text-xs text-slate-400 mt-4">
-            {answers.some((a) => a.slot === mySlot) ? '提出済みです。全員が確定するか時間で判定に進みます。「書き直す」で再編集できます。' : '書けたら「確定」を押してください'}
+            {answers.some((a) => a.slot === mySlot)
+              ? '提出済みです。全員が確定するか時間で判定に進みます。「書き直す」で再編集できます。'
+              : '書けたら「確定」を押してください。時間切れのときは、書いている内容が自動で提出されます。'}
           </p>
         </div>
       </main>

@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS games (
   state VARCHAR(20) NOT NULL DEFAULT 'waiting',
   current_question_index INTEGER NOT NULL DEFAULT 0,
   question_ids UUID[] DEFAULT '{}',
+  used_question_ids UUID[] DEFAULT '{}',  -- この部屋で既に出した問題（重複回避。足りなければリセット）
   reveal_slot INTEGER DEFAULT 0,  -- 公開済みのスロット数 (0-5)
   round_started_at TIMESTAMPTZ,
   correct BOOLEAN,

@@ -1,6 +1,18 @@
 'use client';
 
-import { useCallback, useRef, useEffect, useState } from 'react';
+import {
+  useCallback,
+  useRef,
+  useEffect,
+  useState,
+  forwardRef,
+  useImperativeHandle,
+} from 'react';
+
+export type HandwritingCanvasHandle = {
+  /** 現在のキャンバスを PNG Data URL で取得（タイムアップ時の自動提出用） */
+  getDataUrl: () => string | null;
+};
 
 interface HandwritingCanvasProps {
   slot: number;
@@ -14,19 +26,34 @@ interface HandwritingCanvasProps {
   height?: number;
 }
 
-export default function HandwritingCanvas({
-  slot,
-  disabled = false,
-  submitted = false,
-  resetKey = 0,
-  onSave,
-  width = 120,
-  height = 120,
-}: HandwritingCanvasProps) {
+const HandwritingCanvas = forwardRef<HandwritingCanvasHandle, HandwritingCanvasProps>(function HandwritingCanvas(
+  {
+    slot,
+    disabled = false,
+    submitted = false,
+    resetKey = 0,
+    onSave,
+    width = 120,
+    height = 120,
+  },
+  ref
+) {
   const effectiveDisabled = disabled || submitted;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const lastPos = useRef<{ x: number; y: number } | null>(null);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      getDataUrl: () => {
+        const canvas = canvasRef.current;
+        if (!canvas) return null;
+        return canvas.toDataURL('image/png');
+      },
+    }),
+    []
+  );
 
   const getPoint = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
@@ -180,4 +207,6 @@ export default function HandwritingCanvas({
       </div>
     </div>
   );
-}
+});
+
+export default HandwritingCanvas;

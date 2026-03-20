@@ -46,6 +46,9 @@ npm run dev
 **既存DBで「作問フォルダ」に移行する場合**  
 すでに `questions` テーブルにデータがあるときは、**SQL Editor** で `supabase/migrate_add_folders.sql` の内容を実行してください。既存の問題は「平原」フォルダにまとまります。
 
+**既存DBに「出題済み問題ID」列を追加する場合**（同じ部屋で問題の重複を避ける機能）  
+**SQL Editor** で `supabase/migrate_add_used_question_ids.sql` を実行してください。
+
 ### 2. 環境変数
 
 ```bash

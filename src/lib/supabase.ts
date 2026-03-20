@@ -35,6 +35,8 @@ export interface Game {
   state: GameState;
   current_question_index: number;
   question_ids: string[];
+  /** この部屋で過去に出題済みの問題ID（同一部屋内の重複を避ける） */
+  used_question_ids?: string[];
   reveal_slot: number;
   round_started_at: string | null;
   correct: boolean | null;

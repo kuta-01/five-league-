@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const TOTAL_SECONDS = 45;
 
@@ -14,6 +14,11 @@ export default function Timer({
   running: boolean;
 }) {
   const [remaining, setRemaining] = useState<number>(TOTAL_SECONDS);
+  const expiredOnceRef = useRef(false);
+
+  useEffect(() => {
+    expiredOnceRef.current = false;
+  }, [startAt]);
 
   useEffect(() => {
     if (!running || startAt == null) {
@@ -24,7 +29,10 @@ export default function Timer({
       const elapsed = (Date.now() - startAt) / 1000;
       const r = Math.max(0, Math.ceil(TOTAL_SECONDS - elapsed));
       setRemaining(r);
-      if (r <= 0) onExpire();
+      if (r <= 0 && !expiredOnceRef.current) {
+        expiredOnceRef.current = true;
+        onExpire();
+      }
     };
     tick();
     const id = setInterval(tick, 500);

@@ -138,6 +138,28 @@ git push
 
 - Supabase は無料枠のまま利用（本番も同じプロジェクトで可）。RLS は `schema.sql` のとおり「anon で全操作許可」なので、**URL を秘密にして共有する前提**です。
 
+### 古いゲームデータの定期削除（Vercel Cron）
+
+部屋ごとに `games` / `game_players` / `round_answers` が増えるため、**一定日数より古い `games` 行を削除**する API と、**毎日実行の Cron** を用意しています（`game_players` と `round_answers` は `ON DELETE CASCADE` でまとめて消えます）。**問題データ（`questions` / `question_folders`）は削除しません。**
+
+1. Vercel の **Environment Variables** に追加:
+   - `CRON_SECRET` … 長いランダム文字列（他人に推測されないもの）
+   - （任意）`CLEANUP_RETENTION_DAYS` … 何日より古いものを消すか（未設定時は **7**）
+2. `vercel.json` で **毎日 03:00 UTC**（日本時間 12:00）に `GET /api/cron/cleanup` が実行されます。スケジュールは `vercel.json` の `schedule` で変更可能です。
+3. Vercel は `CRON_SECRET` が設定されていると、Cron 実行時に `Authorization: Bearer <CRON_SECRET>` を付与します。
+
+手動テスト（ローカルまたは本番URL）:
+
+```bash
+curl "https://あなたのドメイン/api/cron/cleanup?secret=CRON_SECRETの値"
+```
+
+保持日数を一時的に変えたい場合（例: 14日より古いものを削除）:
+
+```bash
+curl "https://あなたのドメイン/api/cron/cleanup?secret=...&days=14"
+```
+
 ## 使い方
 
 1. トップで「部屋を作る」→ 遷移したURL（例: `/game/abc12345`）を参加者に共有

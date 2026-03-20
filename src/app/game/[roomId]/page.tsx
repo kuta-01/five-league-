@@ -184,6 +184,12 @@ export default function GamePage() {
   }, [game?.state, game?.correct, game?.current_question_index, playCorrect, playWrong, game]);
 
   useEffect(() => {
+    if (game?.state === 'waiting') {
+      resultSoundKeyRef.current = '';
+    }
+  }, [game?.state]);
+
+  useEffect(() => {
     if (game?.state !== 'countdown') return;
     setCountdown(3);
     const t = setInterval(() => {
@@ -347,6 +353,20 @@ export default function GamePage() {
       }),
     });
     setAnswers([]);
+  };
+
+  const handlePlayAgain = async () => {
+    if (!gameId || mySlot !== 1) return;
+    const res = await fetch(`/api/games/${gameId}/reset-session`, { method: 'POST' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      setError(err.error || '待機に戻せませんでした');
+      return;
+    }
+    setError(null);
+    resultSoundKeyRef.current = '';
+    await fetchGame();
+    await fetchPlayers();
   };
 
   if (loading) {
@@ -516,7 +536,7 @@ export default function GamePage() {
             </p>
           )}
           {state === 'reveal' && isGM && revealUpTo < 5 && (
-            <div className="flex justify-center">
+            <div className="relative z-40 flex justify-center">
               <button
                 onClick={handleRevealNext}
                 className="px-6 py-3 bg-rose-500 text-white font-bold rounded-xl"
@@ -526,16 +546,18 @@ export default function GamePage() {
             </div>
           )}
           {state === 'judge' && isGM && (
-            <div className="flex flex-col items-center gap-4">
+            <div className="relative z-40 flex flex-col items-center gap-4">
               <p className="text-sm text-slate-600">書いた文字が正解と合っていれば「正解」を押してください</p>
               <div className="flex gap-4">
               <button
+                type="button"
                 onClick={() => handleJudge(true)}
                 className="px-6 py-3 bg-green-600 text-white font-bold rounded-xl"
               >
                 正解
               </button>
               <button
+                type="button"
                 onClick={() => handleJudge(false)}
                 className="px-6 py-3 bg-slate-600 text-white font-bold rounded-xl"
               >
@@ -571,11 +593,25 @@ export default function GamePage() {
 
   if (state === 'finished') {
     return (
-      <main className="min-h-screen p-4 flex flex-col items-center justify-center">
+      <main className="min-h-screen p-4 flex flex-col items-center justify-center pb-24">
         <p className="text-2xl font-bold text-slate-800">5問終了！</p>
+        <p className="mt-2 text-sm text-slate-600 text-center max-w-sm">
+          同じ部屋でもう一度遊ぶ場合は、ゲームマスターが「もう一度プレイ」を押してください。
+        </p>
+        {error && <p className="mt-2 text-sm text-red-600 text-center">{error}</p>}
+        {isGM && (
+          <button
+            type="button"
+            onClick={handlePlayAgain}
+            className="mt-6 px-8 py-4 bg-rose-500 text-white font-bold rounded-xl"
+          >
+            もう一度プレイ（待機に戻る）
+          </button>
+        )}
         <button
+          type="button"
           onClick={() => router.push('/')}
-          className="mt-6 px-6 py-3 bg-rose-500 text-white font-bold rounded-xl"
+          className={`mt-4 px-6 py-3 border border-slate-300 text-slate-700 font-medium rounded-xl ${isGM ? '' : 'mt-8'}`}
         >
           トップへ
         </button>

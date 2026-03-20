@@ -34,7 +34,8 @@ export default function SoundProvider({ children }: { children: React.ReactNode 
   const [bgmEnabled, setBgmEnabled] = useState(true);
   const [seEnabled, setSeEnabled] = useState(true);
   const [volume, setVolume] = useState(0.45);
-  const [panelOpen, setPanelOpen] = useState(false);
+  /** false のときは左下に小さなボタンのみ（判定ボタンと被らないようにする） */
+  const [uiExpanded, setUiExpanded] = useState(false);
 
   useEffect(() => {
     try {
@@ -123,30 +124,41 @@ export default function SoundProvider({ children }: { children: React.ReactNode 
     <SoundContext.Provider value={value}>
       {children}
 
-      <div className="fixed right-3 bottom-3 z-50">
-        <div className="bg-white/95 rounded-xl shadow-lg border border-slate-200 p-3 w-64">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-bold text-slate-700">音声設定</p>
-            <button
-              type="button"
-              onClick={() => setPanelOpen((v) => !v)}
-              className="text-xs text-slate-500 underline"
-            >
-              {panelOpen ? '閉じる' : '開く'}
-            </button>
-          </div>
+      {/* 左下: 展開時はパネル、折りたたみ時は小さなボタンのみ（右下の判定UIと重なりにくい） */}
+      <div className="fixed left-3 bottom-3 z-30 pointer-events-none">
+        {!uiExpanded ? (
+          <button
+            type="button"
+            onClick={() => setUiExpanded(true)}
+            className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border border-slate-300 bg-white/95 text-xl shadow-md hover:bg-slate-50"
+            aria-label="音声設定を開く"
+            title="音声設定"
+          >
+            🔊
+          </button>
+        ) : (
+          <div className="pointer-events-auto w-64 rounded-xl border border-slate-200 bg-white/95 p-3 shadow-lg">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-sm font-bold text-slate-700">音声設定</p>
+              <button
+                type="button"
+                onClick={() => setUiExpanded(false)}
+                className="text-xs text-slate-500 underline"
+              >
+                閉じる
+              </button>
+            </div>
 
-          {!ready && (
-            <button
-              type="button"
-              onClick={enableAudio}
-              className="w-full mb-2 px-3 py-2 bg-rose-500 text-white text-sm font-bold rounded-lg"
-            >
-              BGM/効果音を有効化
-            </button>
-          )}
+            {!ready && (
+              <button
+                type="button"
+                onClick={enableAudio}
+                className="mb-2 w-full rounded-lg bg-rose-500 px-3 py-2 text-sm font-bold text-white"
+              >
+                BGM/効果音を有効化
+              </button>
+            )}
 
-          {panelOpen && (
             <div className="space-y-2">
               <label className="flex items-center justify-between text-sm">
                 <span>BGM</span>
@@ -177,8 +189,8 @@ export default function SoundProvider({ children }: { children: React.ReactNode 
                 />
               </label>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </SoundContext.Provider>
   );

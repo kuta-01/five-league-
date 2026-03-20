@@ -309,6 +309,18 @@ export default function GamePage() {
     });
   };
 
+  const handleRevealAll = async () => {
+    if (!gameId || mySlot !== 1) return;
+    await fetch(`/api/games/${gameId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        reveal_slot: 5,
+        state: 'judge',
+      }),
+    });
+  };
+
   const handleJudge = async (correct: boolean) => {
     if (!gameId || mySlot !== 1) return;
     await fetch(`/api/games/${gameId}`, {
@@ -536,12 +548,20 @@ export default function GamePage() {
             </p>
           )}
           {state === 'reveal' && isGM && revealUpTo < 5 && (
-            <div className="relative z-40 flex justify-center">
+            <div className="relative z-40 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
               <button
+                type="button"
                 onClick={handleRevealNext}
                 className="px-6 py-3 bg-rose-500 text-white font-bold rounded-xl"
               >
                 次の文字を公開
+              </button>
+              <button
+                type="button"
+                onClick={handleRevealAll}
+                className="px-6 py-3 bg-slate-700 text-white font-bold rounded-xl"
+              >
+                5文字を一気に公開（判定へ）
               </button>
             </div>
           )}
